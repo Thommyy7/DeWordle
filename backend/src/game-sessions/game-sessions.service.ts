@@ -7,6 +7,7 @@ import { CreateSessionDto } from './dto/create-session.dto';
 import { User } from 'src/auth/entities/user.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { LeaderboardService } from '../leaderboard/leaderboard.service';
+import { submitGuessProvider } from './providers/submit-guess';
 
 @Injectable()
 export class GameSessionsService {
@@ -17,6 +18,7 @@ export class GameSessionsService {
     private gameRepo: Repository<Game>,
     private eventEmitter: EventEmitter2,
     private leaderboardService: LeaderboardService,
+    private submitGuessProvider: submitGuessProvider,
   ) {}
 
   async create(createDto: CreateSessionDto, user: User | null) {
@@ -78,5 +80,9 @@ export class GameSessionsService {
     }
     
     return [];
+  }
+
+  public async submitGuess(sessionId: number, guess: string, user: User | null) {
+    this.submitGuessProvider.submitGuess(sessionId, guess, user)
   }
 }
