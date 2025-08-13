@@ -19,6 +19,7 @@ import { CreateGuessDto } from './dto/create-guess.dto';
 import { evaluateGuess, LetterEvaluation } from '../dewordle/wordle.engine';
 import { GuessHistory } from './entities/guess-history.entity';
 import { GameSessionStatus, MAX_ATTEMPTS } from './game-sessions.constants';
+import { SessionCompletedEvent } from './enums/sessionStatus';
 
 @Injectable()
 export class GameSessionsService {
@@ -182,10 +183,20 @@ export class GameSessionsService {
     });
 
     const status = this.sessionStatus(result, attemptNumber, MAX_ATTEMPTS);
-
     session.history.push(newGuess);
 
-    await this.sessionRepo.save({ ...session, status });
+    const savedSession = await this.sessionRepo.save({ ...session, status });
+
+    if (status === GameSessionStatus.WON || status === GameSessionStatus.LOST) {
+      const eventPayload: SessionCompletedEvent = {
+        sessionId: savedSession.id,
+        userId: savedSession.user?.id,
+        finalStatus: status,
+        guessCount: savedSession.history.length,
+        solutionWord: savedSession.solution,
+      };
+      this.eventEmitter.emit('session.completed', eventPayload);
+    }
 
     return {
       evaluation: result,
