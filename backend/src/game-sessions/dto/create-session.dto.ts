@@ -2,7 +2,6 @@ import {
   IsInt,
   IsOptional,
   IsJSON,
-  IsNotEmpty,
   IsString,
   ValidateNested,
 } from 'class-validator';

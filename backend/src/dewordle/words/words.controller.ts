@@ -10,7 +10,13 @@ import {
   Post,
 } from '@nestjs/common';
 import { WordsService } from './words.service';
-import { ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { EnrichedWord } from '../../utils/dictionary.helper';
 import { WordScheduler } from './word.scheduler';
 import { CreateWordDto } from './dto/create-word.dto';
@@ -27,7 +33,7 @@ export class WordsController {
     private readonly wordsService: WordsService,
     private readonly wordScheduler: WordScheduler,
     private readonly wordValidationProvider: WordValidationProvider,
-    private readonly enrichedWordsProvider: EnrichedWordsProvider
+    private readonly enrichedWordsProvider: EnrichedWordsProvider,
   ) {}
 
   @Get('test')
@@ -143,7 +149,7 @@ export class WordsController {
   create(@Body() dto: CreateWordDto) {
     return this.wordsService.createWord(dto);
   }
-  
+
   @Post('validate')
   async validateWord(@Body('word') word: string) {
     // No validation logic here — service will handle errors
@@ -153,7 +159,8 @@ export class WordsController {
   @Get(':text')
   @ApiOperation({
     summary: 'Get word details',
-    description: 'Fetches enriched details about a given word. If the word is not found, a 404 error is returned.',
+    description:
+      'Fetches enriched details about a given word. If the word is not found, a 404 error is returned.',
   })
   @ApiParam({
     name: 'text',

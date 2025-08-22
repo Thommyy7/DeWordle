@@ -28,7 +28,11 @@ export class GameSession {
   @Column()
   durationSeconds: number;
 
-  @Column({ type: 'enum', enum: GameSessionStatus, default: GameSessionStatus.IN_PROGRESS })
+  @Column({
+    type: 'enum',
+    enum: GameSessionStatus,
+    default: GameSessionStatus.IN_PROGRESS,
+  })
   status: GameSessionStatus;
 
   @Column('json', { nullable: true })
