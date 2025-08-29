@@ -47,7 +47,11 @@ export class AuthService {
     // Send email
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
     const html = `<p>You requested a password reset. <a href="${resetUrl}">Click here to reset your password</a>. This link will expire in 30 minutes.</p>`;
-    await this.emailService.sendMail(user.email, 'Password Reset Request', html);
+    await this.emailService.sendMail(
+      user.email,
+      'Password Reset Request',
+      html,
+    );
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -124,6 +128,7 @@ export class AuthService {
     user: {
       id: number;
       email: string;
+      username: string;
     };
     success_message: string;
   }> {
@@ -146,6 +151,7 @@ export class AuthService {
       user: {
         id: user.id,
         email: user.email,
+        username: user.username,
       },
       success_message: 'Sign in Successful',
     };

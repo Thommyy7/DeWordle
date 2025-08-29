@@ -10,9 +10,9 @@ import {
 
 import * as authApi from '../service/api/auth';
 interface User {
-  id: string;
+  id: string | number;
   email: string;
-  username: string;
+  username?: string;
 }
 
 interface AuthState {
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (token && userData) {
         const user = JSON.parse(userData);
 
-        const response = await fetch('/api/auth/verify', {
+        const response = await fetch('/auth/verify', {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -91,11 +91,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const data = await authApi.authApi.login({ email, password });
 
-      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('accessToken', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
       setState({
-        accessToken: data.accessToken,
+        accessToken: data.access_token,
         user: data.user,
         isAuthenticated: true,
         isLoading: false,
@@ -110,11 +110,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const data = await authApi.authApi.signup({ email, password, username });
       // Store in localStorage
-      localStorage.setItem('accessToken', data.accessToken);
+      localStorage.setItem('accessToken', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
       setState({
-        accessToken: data.accessToken,
+        accessToken: data.access_token,
         user: data.user,
         isAuthenticated: true,
         isLoading: false,

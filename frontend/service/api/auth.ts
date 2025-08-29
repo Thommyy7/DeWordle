@@ -1,31 +1,19 @@
 'use client';
+
+import {
+  AuthResponse,
+  LoginRequest,
+  SignupRequest,
+  UserResponse,
+} from '../../types/auth.entity';
+
 const getApiUrl = (endpoint: string) => {
   const baseUrl = 'https://dewordle.onrender.com/api/v1';
   return `${baseUrl}${endpoint}`;
 };
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface SignupRequest {
-  email: string;
-  password: string;
-  username: string;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  user: {
-    id: string;
-    email: string;
-    username: string;
-  };
-}
-
 export const authApi = {
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
+  login: async (data: LoginRequest): Promise<UserResponse> => {
     const response = await fetch(getApiUrl('/auth/login'), {
       method: 'POST',
       headers: {
@@ -39,11 +27,13 @@ export const authApi = {
       throw new Error(error.message || 'Login failed');
     }
 
-    return response.json();
+    const userData: UserResponse = await response.json();
+
+    return userData;
   },
 
   signup: async (data: SignupRequest): Promise<AuthResponse> => {
-    const response = await fetch(getApiUrl('/api/auth/signup'), {
+    const response = await fetch(getApiUrl('/auth/signup'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -55,8 +45,9 @@ export const authApi = {
       const error = await response.json();
       throw new Error(error.message || 'Signup failed');
     }
+    const userData: AuthResponse = await response.json();
 
-    return response.json();
+    return userData;
   },
 
   verify: async (token: string): Promise<{ valid: boolean }> => {
