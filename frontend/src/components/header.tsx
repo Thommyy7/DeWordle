@@ -1,25 +1,38 @@
-"use client";
-import { useState } from "react";
-import { LoginForm } from "./LoginModal";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Button } from "./ui/button";
-
-import Image from "next/image";
-import { MenuIcon } from "./ui/icons/icon";
+'use client';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { createAvatar } from '@dicebear/core';
+import { adventurer } from '@dicebear/collection';
+import Image from 'next/image';
+import { Bell } from 'lucide-react';
+import { MenuIcon } from './ui/icons/icon';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { useAuth } from '../../context/AuthContext';
+import { LoginForm } from './LoginModal';
 
 const navItems = [
-  { label: "Home", href: "/" },
-  { label: "Games", href: "/games" },
-  { label: "Categories", href: "/categories" },
-  { label: "Community", href: "/community" },
+  { label: 'Home', href: '/' },
+  { label: 'Games', href: '/games' },
+  { label: 'Categories', href: '/categories' },
+  { label: 'Community', href: '/community' },
 ];
 
 export default function Header() {
   const pathname = usePathname();
-
+  const { isAuthenticated, user } = useAuth();
   const [modal, setModal] = useState(false);
   const isActive = (href: string) => pathname === href;
+  const avatar = useMemo(() => {
+    return createAvatar(adventurer, {
+      size: 128,
+      seed: user?.username || 'user',
+    }).toDataUri();
+  }, [user]);
 
   return (
     <div>
@@ -40,7 +53,7 @@ export default function Header() {
               <Link
                 href={item.href}
                 className={`font-jakarta font-semibold text-lg tracking-wide whitespace-nowrap ${
-                  isActive(item.href) ? "text-white" : "text-gray-400"
+                  isActive(item.href) ? 'text-white' : 'text-gray-400'
                 }`}
               >
                 {item.label}
@@ -52,19 +65,40 @@ export default function Header() {
           ))}
         </div>
 
-        <div className="hidden md:flex">
-          <Button variant="outline" onClick={() => setModal(true)}>
-            Login / Sign up
-          </Button>
-          {/* <button
-            className="bg-white rounded-2xl text-black px-2 py-1"
-            onClick={() => setModal(true)}
-          >
-            Sign In
-          </button> */}
-        </div>
+        {!isAuthenticated && (
+          <Popover>
+            <PopoverTrigger>
+              <div className="hidden md:flex">
+                <div
+                  className="px-6 py-4 rounded-lg border-[0.5px] border-white bg-transparent hover:bg-white/10 text-white font-jakarta text-lg tracking-wide font-medium leading-6"
+                  onClick={() => setModal(true)}
+                >
+                  Login / Sign up
+                </div>
+              </div>
+            </PopoverTrigger>
+            <PopoverContent>
+              <LoginForm closeModal={() => setModal(false)} />
+            </PopoverContent>
+          </Popover>
+        )}
+        {isAuthenticated && (
+          <div className="flex gap-4 items-center">
+            <div className="border p-1 rounded-full">
+              <Image
+                src={avatar}
+                alt="User Avatar"
+                width={30}
+                height={30}
+                className="rounded-full"
+              />
+            </div>
+            <button className=" cursor-pointer">
+              <Bell />
+            </button>
+          </div>
+        )}
       </nav>
-      {modal && <LoginForm closeModal={() => setModal(false)} />}
     </div>
   );
 }
