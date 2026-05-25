@@ -8,12 +8,17 @@ on:
       - 'soroban/**'
       - '.github/workflows/soroban-foundation.yml'
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   soroban-rust:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: soroban

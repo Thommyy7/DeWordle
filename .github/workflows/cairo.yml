@@ -6,10 +6,15 @@ on:
     branches:
       - main
   pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 permissions: read-all
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: asdf-vm/actions/install@v3
@@ -20,6 +25,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: asdf-vm/actions/install@v3
