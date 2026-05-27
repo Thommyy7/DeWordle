@@ -7,9 +7,26 @@ import { CursorService } from './projections/cursor.service';
 import { compareEventsByCursor } from './processors/event-ordering.util';
 import { INDEXER_STREAM_CORE_GAME } from './indexer.constants';
 
+/** Observability counters for indexer health metrics. */
+export interface IndexerMetrics {
+  ingestedTotal: number;
+  replaySkips: number;
+  projectionErrors: number;
+  pollCycles: number;
+  lastCursorLedger: number;
+}
+
 @Injectable()
 export class IndexerService {
   private readonly logger = new Logger(IndexerService.name);
+
+  readonly metrics: IndexerMetrics = {
+    ingestedTotal: 0,
+    replaySkips: 0,
+    projectionErrors: 0,
+    pollCycles: 0,
+    lastCursorLedger: 0,
+  };
 
   constructor(
     private readonly eventProcessor: EventProcessorService,
@@ -19,14 +36,36 @@ export class IndexerService {
   ) {}
 
   async ingest(event: IngestedEventDto) {
-    await this.eventProcessor.process(event);
-    await this.cursorService.checkpoint(
-      event.network,
-      INDEXER_STREAM_CORE_GAME,
-      event.ledger,
-      event.txHash,
-      event.eventIndex,
-    );
+    const t0 = Date.now();
+    try {
+      await this.eventProcessor.process(event);
+      await this.cursorService.checkpoint(
+        event.network,
+        INDEXER_STREAM_CORE_GAME,
+        event.ledger,
+        event.txHash,
+        event.eventIndex,
+      );
+      this.metrics.ingestedTotal++;
+      this.metrics.lastCursorLedger = event.ledger;
+      this.logger.log({
+        msg: 'indexer.ingest.ok',
+        topic: event.topic,
+        ledger: event.ledger,
+        txHash: event.txHash,
+        eventIndex: event.eventIndex,
+        latencyMs: Date.now() - t0,
+      });
+    } catch (err) {
+      this.metrics.projectionErrors++;
+      this.logger.error({
+        msg: 'indexer.ingest.error',
+        topic: event.topic,
+        ledger: event.ledger,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
   }
 
   async poll(): Promise<number> {
@@ -42,7 +81,19 @@ export class IndexerService {
     }
 
     const cursor = await this.cursorService.getOrCreate(network, INDEXER_STREAM_CORE_GAME);
+    this.metrics.pollCycles++;
+    this.metrics.lastCursorLedger = cursor.lastLedger;
 
+    this.logger.log({
+      msg: 'indexer.poll.tick',
+      network,
+      rpc: rpcUrl ?? 'unset',
+      contract: contractId ?? 'unset',
+      cursorLedger: cursor.lastLedger,
+      cursorTxHash: cursor.lastTxHash,
+      cursorEventIndex: cursor.lastEventIndex,
+      metrics: { ...this.metrics },
+    });
     this.logger.debug(
       `poll network=${network} rpc=${rpcUrl} contract=${contractId} cursor=${cursor.lastLedger}:${cursor.lastTxHash}:${cursor.lastEventIndex}`,
     );
@@ -87,5 +138,16 @@ export class IndexerService {
     }>(rpcUrl, body, { timeout: 10_000 });
 
     return response.data?.result?.events ?? [];
+  }
+
+  recordReplaySkip(ledger: number, txHash: string, eventIndex: number) {
+    this.metrics.replaySkips++;
+    this.logger.warn({
+      msg: 'indexer.replay.skip',
+      ledger,
+      txHash,
+      eventIndex,
+      totalSkips: this.metrics.replaySkips,
+    });
   }
 }
