@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod fixtures;
+
 use dewordle_auth::{require_admin, set_admin};
 use dewordle_types::{DayConfig, GuessResult, PlayerStreak, Session, SessionStatus};
 use dewordle_utils::current_day_id;
@@ -331,14 +333,184 @@ impl CoreGameContract {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::{Address as _, Ledger};
+
+    fn setup() -> (Env, Address) {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        CoreGameContract::init(env.clone(), admin.clone());
+        (env, admin)
+    }
+
+    fn publish_day(env: &Env, day_id: u32) {
+        let commitment = BytesN::from_array(env, &[1u8; 32]);
+        CoreGameContract::set_day_config(env.clone(), day_id, commitment, 6, u64::MAX);
+    }
 
     #[test]
     fn init_sets_unpaused_state() {
-        let env = Env::default();
-        let admin = Address::generate(&env);
-
-        CoreGameContract::init(env.clone(), admin);
+        let (env, _) = setup();
         assert!(!CoreGameContract::is_paused(env));
+    }
+
+    #[test]
+    #[should_panic]
+    fn init_twice_panics() {
+        let (env, admin) = setup();
+        CoreGameContract::init(env, admin);
+    }
+
+    #[test]
+    fn pause_and_unpause() {
+        let (env, _) = setup();
+        CoreGameContract::pause(env.clone(), true);
+        assert!(CoreGameContract::is_paused(env.clone()));
+        CoreGameContract::pause(env.clone(), false);
+        assert!(!CoreGameContract::is_paused(env));
+    }
+
+    #[test]
+    #[should_panic]
+    fn create_session_when_paused_panics() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        CoreGameContract::pause(env.clone(), true);
+        let player = Address::generate(&env);
+        CoreGameContract::create_session(env, player, 1, 0);
+    }
+
+    #[test]
+    fn create_session_success() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        let session = CoreGameContract::get_session(env, session_id);
+        assert_eq!(session.player, player);
+        assert_eq!(session.day_id, 1);
+        assert!(!session.finalized);
+    }
+
+    #[test]
+    #[should_panic]
+    fn nonce_reuse_panics() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        CoreGameContract::create_session(env, player, 1, 0);
+    }
+
+    #[test]
+    fn is_nonce_used_returns_true_after_session() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        assert!(!CoreGameContract::is_nonce_used(env.clone(), player.clone(), 0));
+        CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        assert!(CoreGameContract::is_nonce_used(env, player, 0));
+    }
+
+    #[test]
+    fn submit_guess_increments_attempts() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        let commitment = BytesN::from_array(&env, &[2u8; 32]);
+        let result = CoreGameContract::submit_guess(
+            env.clone(), player, session_id, commitment, 1, false,
+        );
+        assert_eq!(result.attempt_no, 1);
+        assert!(!result.is_correct);
+    }
+
+    #[test]
+    #[should_panic]
+    fn submit_guess_zero_commitment_panics() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        let zero = BytesN::from_array(&env, &[0u8; 32]);
+        CoreGameContract::submit_guess(env, player, session_id, zero, 0, false);
+    }
+
+    #[test]
+    #[should_panic]
+    fn submit_guess_wrong_player_panics() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let other = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player, 1, 0);
+        let commitment = BytesN::from_array(&env, &[2u8; 32]);
+        CoreGameContract::submit_guess(env, other, session_id, commitment, 1, false);
+    }
+
+    #[test]
+    fn finalize_session_after_win() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        let commitment = BytesN::from_array(&env, &[2u8; 32]);
+        CoreGameContract::submit_guess(
+            env.clone(), player.clone(), session_id.clone(), commitment, 1, true,
+        );
+        let session = CoreGameContract::finalize_session(env, player, session_id);
+        assert!(session.finalized);
+    }
+
+    #[test]
+    #[should_panic]
+    fn finalize_in_progress_session_panics() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        CoreGameContract::finalize_session(env, player, session_id);
+    }
+
+    #[test]
+    #[should_panic]
+    fn finalize_twice_panics() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        let commitment = BytesN::from_array(&env, &[2u8; 32]);
+        CoreGameContract::submit_guess(
+            env.clone(), player.clone(), session_id.clone(), commitment, 1, true,
+        );
+        CoreGameContract::finalize_session(env.clone(), player.clone(), session_id.clone());
+        CoreGameContract::finalize_session(env, player, session_id);
+    }
+
+    #[test]
+    fn attempt_limit_reached_sets_lost() {
+        let (env, _) = setup();
+        publish_day(&env, 1);
+        let player = Address::generate(&env);
+        let session_id = CoreGameContract::create_session(env.clone(), player.clone(), 1, 0);
+        for i in 0..6u8 {
+            let commitment = BytesN::from_array(&env, &[i + 2; 32]);
+            CoreGameContract::submit_guess(
+                env.clone(), player.clone(), session_id.clone(), commitment, 0, false,
+            );
+        }
+        let session = CoreGameContract::get_session(env, session_id);
+        assert!(matches!(session.status, SessionStatus::Lost));
+    }
+
+    #[test]
+    fn event_topics_match_fixtures() {
+        assert_eq!(fixtures::TOPIC_SESSION_STARTED, "session_started");
+        assert_eq!(fixtures::TOPIC_GUESS_SUBMITTED, "guess_submitted");
+        assert_eq!(fixtures::TOPIC_SESSION_FINALIZED, "session_finalized");
+        assert_eq!(fixtures::TOPIC_DAY_PUBLISHED, "day_published");
+        assert_eq!(fixtures::TOPIC_STREAK_UPDATED, "streak_updated");
+        assert_eq!(fixtures::TOPIC_CORE_GAME_PAUSED, "core_game_paused");
     }
 }

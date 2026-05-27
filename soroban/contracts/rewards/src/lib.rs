@@ -1,5 +1,7 @@
 #![no_std]
 
+pub mod fixtures;
+
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype, panic_with_error, Address, Env, Symbol,
 };
@@ -137,5 +139,88 @@ impl RewardsContract {
             .unwrap_or_else(|| panic_with_error!(env, RewardsError::NotInitialized));
 
         admin.require_auth();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+
+    fn setup() -> (Env, Address) {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        RewardsContract::init(env.clone(), admin.clone());
+        (env, admin)
+    }
+
+    #[test]
+    #[should_panic]
+    fn init_twice_panics() {
+        let (env, admin) = setup();
+        RewardsContract::init(env, admin);
+    }
+
+    #[test]
+    fn accrue_and_balance() {
+        let (env, _) = setup();
+        let player = Address::generate(&env);
+        let reason = Symbol::new(&env, "win");
+        RewardsContract::accrue(env.clone(), player.clone(), 100, 1, reason);
+        assert_eq!(RewardsContract::balance_of(env, player), 100);
+    }
+
+    #[test]
+    #[should_panic]
+    fn nonce_replay_panics() {
+        let (env, _) = setup();
+        let player = Address::generate(&env);
+        let reason = Symbol::new(&env, "win");
+        RewardsContract::accrue(env.clone(), player.clone(), 100, 1, reason.clone());
+        RewardsContract::accrue(env, player, 100, 1, reason);
+    }
+
+    #[test]
+    fn claim_resets_balance_and_increases_claimed_total() {
+        let (env, _) = setup();
+        let player = Address::generate(&env);
+        let reason = Symbol::new(&env, "win");
+        RewardsContract::accrue(env.clone(), player.clone(), 50, 1, reason);
+        let claimed = RewardsContract::claim(env.clone(), player.clone());
+        assert_eq!(claimed, 50);
+        assert_eq!(RewardsContract::balance_of(env.clone(), player.clone()), 0);
+        assert_eq!(RewardsContract::claimed_total(env, player), 50);
+    }
+
+    #[test]
+    fn non_admin_accrue_rejected() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        RewardsContract::init(env.clone(), admin);
+        // Without mock_all_auths, admin.require_auth() will panic for non-admin caller
+        let player = Address::generate(&env);
+        let reason = Symbol::new(&env, "win");
+        // This should panic because auth is not mocked
+        let result = std::panic::catch_unwind(|| {
+            RewardsContract::accrue(env.clone(), player, 100, 1, reason);
+        });
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn emission_config_read_write() {
+        let (env, _) = setup();
+        RewardsContract::set_emission(env.clone(), 1, 100, 10);
+        let cfg = RewardsContract::get_emission(env, 1).unwrap();
+        assert_eq!(cfg.win_points, 100);
+        assert_eq!(cfg.participation_points, 10);
+    }
+
+    #[test]
+    fn event_topics_match_fixtures() {
+        assert_eq!(fixtures::TOPIC_ACCRUED, "accrued");
+        assert_eq!(fixtures::TOPIC_CLAIMED, "claimed");
+        assert_eq!(fixtures::TOPIC_EMISSION_SET, "emission_set");
     }
 }
