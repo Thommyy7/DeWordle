@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { IngestedEventDto } from '../dto/ingested-event.dto';
 import { IngestedEventEntity } from '../entities/ingested-event.entity';
 import { ProjectionService } from '../projections/projection.service';
+import { IndexerLogContext } from '../indexer.service';
 
 @Injectable()
 export class EventProcessorService {
@@ -16,7 +17,7 @@ export class EventProcessorService {
     private readonly projectionService: ProjectionService,
   ) {}
 
-  async process(event: IngestedEventDto): Promise<boolean> {
+  async process(event: IngestedEventDto, context?: IndexerLogContext): Promise<boolean> {
     const exists = await this.eventsRepo.findOne({
       where: {
         network: event.network,
@@ -27,14 +28,18 @@ export class EventProcessorService {
 
     if (exists) {
       this.replaySkipCount++;
-      this.logger.debug(
-        `Duplicate event skipped txHash=${event.txHash} eventIndex=${event.eventIndex} totalSkipped=${this.replaySkipCount}`,
-      );
+      this.logger.debug({
+        msg: 'indexer.event.duplicate',
+        correlationId: context?.correlationId,
+        txHash: event.txHash,
+        eventIndex: event.eventIndex,
+        totalSkipped: this.replaySkipCount,
+      });
       return false;
     }
 
     await this.eventsRepo.save(this.eventsRepo.create(event));
-    await this.projectionService.apply(event);
+    await this.projectionService.apply(event, context);
     return true;
   }
 

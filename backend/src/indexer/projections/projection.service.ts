@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SessionProjectionEntity } from '../entities/session-projection.entity';
 import { IngestedEventDto } from '../dto/ingested-event.dto';
+import { IndexerLogContext } from '../indexer.service';
 
 @Injectable()
 export class ProjectionService {
@@ -17,14 +18,19 @@ export class ProjectionService {
    * Applies an event to the projection. Idempotent: replaying the same
    * session_finalized event produces the same projection state (upsert by sessionId).
    */
-  async apply(event: IngestedEventDto): Promise<boolean> {
+  async apply(event: IngestedEventDto, context?: IndexerLogContext): Promise<boolean> {
     if (event.topic !== 'session_finalized') {
       return false;
     }
 
     const sessionId = String(event.payload.sessionId ?? '');
     if (!sessionId) {
-      this.logger.warn(`session_finalized event missing sessionId txHash=${event.txHash}`);
+      this.logger.warn({
+        msg: 'indexer.projection.skipped',
+        correlationId: context?.correlationId,
+        reason: 'missing_session_id',
+        txHash: event.txHash,
+      });
       return false;
     }
 

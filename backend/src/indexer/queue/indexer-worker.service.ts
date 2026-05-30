@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -17,11 +18,13 @@ export class IndexerWorkerService {
 
   @Cron(CronExpression.EVERY_10_SECONDS)
   async tick() {
+    const correlationId = randomUUID();
     const network = this.configService.get<string>('SOROBAN_NETWORK') || INDEXER_NETWORK_TESTNET;
     const cursor = await this.cursorService.getOrCreate(network, INDEXER_STREAM_CORE_GAME);
 
     this.logger.log({
       msg: 'indexer.worker.tick',
+      correlationId,
       network,
       cursorLedger: cursor.lastLedger,
       cursorTxHash: cursor.lastTxHash,
@@ -29,6 +32,6 @@ export class IndexerWorkerService {
       metrics: { ...this.indexerService.metrics },
     });
 
-    await this.indexerService.poll();
+    await this.indexerService.poll({ correlationId });
   }
 }

@@ -6,7 +6,12 @@ import { EventProcessorService } from './processors/event-processor.service';
 import { EventNormalizerService } from './processors/event-normalizer.service';
 import { CursorService } from './projections/cursor.service';
 import { compareEventsByCursor } from './processors/event-ordering.util';
+import { randomUUID } from 'crypto';
 import { INDEXER_STREAM_CORE_GAME } from './indexer.constants';
+
+export interface IndexerLogContext {
+  correlationId: string;
+}
 
 /** Observability counters for indexer health metrics. */
 export interface IndexerMetrics {
@@ -54,10 +59,10 @@ export class IndexerService {
     private readonly configService: ConfigService,
   ) {}
 
-  async ingest(event: IngestedEventDto) {
+  async ingest(event: IngestedEventDto, context?: IndexerLogContext) {
     const t0 = Date.now();
     try {
-      await this.eventProcessor.process(event);
+      await this.eventProcessor.process(event, context);
       await this.cursorService.checkpoint(
         event.network,
         INDEXER_STREAM_CORE_GAME,
@@ -69,6 +74,7 @@ export class IndexerService {
       this.metrics.lastCursorLedger = event.ledger;
       this.logger.log({
         msg: 'indexer.ingest.ok',
+        correlationId: context?.correlationId,
         topic: event.topic,
         ledger: event.ledger,
         txHash: event.txHash,
@@ -79,6 +85,7 @@ export class IndexerService {
       this.metrics.projectionErrors++;
       this.logger.error({
         msg: 'indexer.ingest.error',
+        correlationId: context?.correlationId,
         topic: event.topic,
         ledger: event.ledger,
         error: err instanceof Error ? err.message : String(err),
@@ -120,14 +127,21 @@ export class IndexerService {
   }
 
   async poll(): Promise<number> {
+  async poll(context?: IndexerLogContext): Promise<number> {
     const network =
       (this.configService.get<string>('SOROBAN_NETWORK') as 'testnet' | 'mainnet') ||
       'testnet';
     const rpcUrl = this.configService.get<string>('SOROBAN_RPC_URL');
     const contractId = this.configService.get<string>('SOROBAN_CORE_GAME_CONTRACT_ID');
 
+    const cycleContext: IndexerLogContext = context ?? { correlationId: randomUUID() };
+
     if (!rpcUrl || !contractId) {
-      this.logger.warn('SOROBAN_RPC_URL or SOROBAN_CORE_GAME_CONTRACT_ID not set — poll skipped');
+      this.logger.warn({
+        msg: 'indexer.poll.skipped',
+        correlationId: cycleContext.correlationId,
+        reason: 'missing_config',
+      });
       return 0;
     }
 
@@ -137,17 +151,21 @@ export class IndexerService {
 
     this.logger.log({
       msg: 'indexer.poll.tick',
+      correlationId: cycleContext.correlationId,
       network,
-      rpc: rpcUrl ?? 'unset',
-      contract: contractId ?? 'unset',
       cursorLedger: cursor.lastLedger,
       cursorTxHash: cursor.lastTxHash,
       cursorEventIndex: cursor.lastEventIndex,
       metrics: { ...this.metrics },
     });
-    this.logger.debug(
-      `poll network=${network} rpc=${rpcUrl} contract=${contractId} cursor=${cursor.lastLedger}:${cursor.lastTxHash}:${cursor.lastEventIndex}`,
-    );
+    this.logger.debug({
+      msg: 'indexer.poll.debug',
+      correlationId: cycleContext.correlationId,
+      network,
+      cursorLedger: cursor.lastLedger,
+      cursorTxHash: cursor.lastTxHash,
+      cursorEventIndex: cursor.lastEventIndex,
+    });
 
     const rawEvents = await this.fetchEvents(rpcUrl, contractId, cursor.lastLedger);
 
@@ -158,11 +176,15 @@ export class IndexerService {
 
     let ingested = 0;
     for (const event of normalized) {
-      await this.ingest(event);
+      await this.ingest(event, cycleContext);
       ingested++;
     }
 
-    this.logger.log(`poll complete ingested=${ingested}`);
+    this.logger.log({
+      msg: 'indexer.poll.complete',
+      correlationId: cycleContext.correlationId,
+      ingested,
+    });
     return ingested;
   }
 
@@ -207,9 +229,11 @@ export class IndexerService {
   }
 
   recordReplaySkip(ledger: number, txHash: string, eventIndex: number) {
+  recordReplaySkip(ledger: number, txHash: string, eventIndex: number, context?: IndexerLogContext) {
     this.metrics.replaySkips++;
     this.logger.warn({
       msg: 'indexer.replay.skip',
+      correlationId: context?.correlationId,
       ledger,
       txHash,
       eventIndex,

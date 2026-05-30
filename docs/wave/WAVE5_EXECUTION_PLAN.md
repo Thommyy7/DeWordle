@@ -44,8 +44,9 @@ This document orchestrates contributor operations and governance while delegatin
 - Operational docs aligned with current branch and milestone state.
 
 ## Maintainer Workflow Expectations
-- Triage issues at least 2x/week.
-- Validate scope and dependencies before labeling `wave:ready`.
+- Triage issues at least 2x/week following the [Maintainer Triage Routine](../GITHUB_PROJECT_PLAN.md#maintainer-triage-routine).
+- Validate scope and dependencies before labeling `wave:ready` and moving to the **Ready** lane.
+- Enforce track-based routing as defined in the [Project Board Plan](../GITHUB_PROJECT_PLAN.md#track-based-routing-rules).
 - Enforce single-track PR scope unless explicitly marked cross-track.
 - Keep milestone burndown visible and updated weekly.
 - Publish weekly Wave status note: completed, blocked, reprioritized.

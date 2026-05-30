@@ -128,5 +128,6 @@ Run this at each 2×/week triage session:
 ## Related Docs
 - [Wave 5 Issue Tracks](./WAVE5_ISSUE_TRACKS.md)
 - [Wave 5 Execution Plan](./WAVE5_EXECUTION_PLAN.md)
+- [GitHub Project Board Plan](../GITHUB_PROJECT_PLAN.md)
 - [GitHub Strategy](../SOROBAN_GITHUB_STRATEGY.md)
 - [PR Review Template](./../.github/PULL_REQUEST_TEMPLATE.md) *(if present)*

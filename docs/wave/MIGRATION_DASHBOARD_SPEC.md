@@ -172,7 +172,15 @@ GitHub Issues/PRs (labels, state)
 ## Implementation Notes
 
 - The automated data pipeline is specified in W5-3B-AUTO-002 (dependency). This spec defines the data contract that pipeline must satisfy.
-- Until automation is available, maintainers can generate a manual snapshot using the GitHub Issues API:
+- Maintainers can generate milestone-specific health summaries with:
+  ```bash
+  ./scripts/gen-milestone-health-report.sh M5
+  ./scripts/gen-milestone-health-report.sh M6 kike-alt/DeWordle wave:5
+  ```
+- The generator writes both Markdown and JSON outputs under `docs/wave/`:
+  - `MILESTONE_HEALTH_<milestone>.md`
+  - `MILESTONE_HEALTH_<milestone>.json`
+- Until automation is available, maintainers can still generate a manual snapshot using the GitHub Issues API:
   ```bash
   gh issue list --label "Stellar Wave" --state all --json number,title,labels,state,assignees,milestone --limit 200 > docs/wave/dashboard-export.json
   ```
