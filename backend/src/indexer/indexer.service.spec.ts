@@ -71,6 +71,8 @@ describe('IndexerService.poll', () => {
     const calls = (eventProcessor.process as jest.Mock).mock.calls;
     expect(calls[0][0].ledger).toBe(11);
     expect(calls[1][0].ledger).toBe(12);
+    expect(calls[0][1]).toEqual(expect.objectContaining({ correlationId: expect.any(String) }));
+    expect(calls[1][1]).toEqual(calls[0][1]);
   });
 
   it('skips invalid events (missing contractId)', async () => {
