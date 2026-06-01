@@ -11,6 +11,8 @@
 - Event replay safety with unique key `(network, txHash, eventIndex)`.
 - Projection updates are idempotent by design.
 - Cursor checkpoint model added for deterministic polling progress.
+- Bounded queue buffering rejects bursts once `INDEXER_QUEUE_MAX_BUFFER_SIZE` is reached.
+- Replay rejection alerts emit structured threshold snapshots for operational visibility.
 
 ## Frontend wallet
 - Explicit tx lifecycle states (signing/submitting/success/error).
@@ -65,6 +67,7 @@ Covers `core_game`, `rewards`, `achievements` Soroban contracts and the backend 
 - Projection `apply()` is idempotent: upsert by `(network, sessionId)` overwrites rather than appends.
 - Payload size guard (configurable via `INDEXER_MAX_PAYLOAD_BYTES`) rejects oversized payloads that could carry embedded replay data.
 - Topic allowlist (`ALLOWED_TOPICS`) rejects unknown event types at normalization time.
+- Queue backpressure guard rejects oversized bursts before they can accumulate in memory.
 
 **Owner module:** `backend/src/indexer`  
 **Mitigation tests:** `event-normalizer.service.spec.ts` — allowlist and payload-size guard tests.  
@@ -110,3 +113,12 @@ Covers `core_game`, `rewards`, `achievements` Soroban contracts and the backend 
 | 3 | Ingestion pipeline replay | High | Mitigated | #606 (HMAC on ingest) |
 | 4 | Cross-network replay | Medium | Mitigated | — |
 | 5 | Reward/achievement double-claim | High | Partial | #607 (on-chain claimed-flag tests) |
+
+---
+
+## Pre-testnet Hardening Checklist
+
+- Confirm replay rejection alerts are visible in worker tick logs.
+- Verify the indexer queue rejects burst traffic once the bounded buffer is full.
+- Run the workflow secret-scope policy check before merging workflow changes.
+- Keep security notes and wave docs aligned with any behavior changes.
