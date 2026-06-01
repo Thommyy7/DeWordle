@@ -1,3 +1,5 @@
+import { diagnoseRegistryMismatch, formatRegistryMismatchDiagnostics } from "./registry-diagnostics";
+
 export type NetworkName = "testnet" | "mainnet";
 
 export interface SorobanNetworkConfig {
@@ -144,8 +146,13 @@ export async function loadContractRegistry(
   }
 
   if (registry.network !== network) {
+    const diagnostics = diagnoseRegistryMismatch({
+      expectedNetwork: network,
+      actualNetwork: registry.network,
+    });
     throw new Error(
-      `Contract registry network mismatch: expected "${network}", got "${registry.network}"`,
+      `Contract registry network mismatch: expected "${network}", got "${registry.network}". ` +
+        formatRegistryMismatchDiagnostics(diagnostics!),
     );
   }
 

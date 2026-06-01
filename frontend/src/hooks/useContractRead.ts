@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DayConfig, Session } from "@dewordle/soroban-sdk";
 import { CoreGameClient, NETWORKS, loadContractRegistry } from "@dewordle/soroban-sdk";
+import { diagnoseRegistryMismatch, formatRegistryMismatchDiagnostics } from "@dewordle/soroban-sdk";
 import type { StellarNetwork } from "@/lib/stellar/network";
 
 interface ReadState<T> {
@@ -38,8 +39,19 @@ function useClient(network: StellarNetwork) {
           setReady(true);
         }
       })
-      .catch(() => {
-        // Registry not available; hooks will return null data
+      .catch((err: unknown) => {
+        if (cancelled) return;
+
+        const message = err instanceof Error ? err.message : "Registry not available";
+        const diagnostics = diagnoseRegistryMismatch({
+          expectedNetwork: network,
+          actualNetwork: message.includes("mismatch") ? "unknown" : undefined,
+        });
+        setReady(false);
+        // Keep the hook resilient: consumers get null data and a descriptive error path.
+        if (diagnostics) {
+          console.warn(formatRegistryMismatchDiagnostics(diagnostics));
+        }
       });
     return () => {
       cancelled = true;
