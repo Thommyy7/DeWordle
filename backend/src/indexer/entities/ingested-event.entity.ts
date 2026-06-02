@@ -24,6 +24,9 @@ export class IngestedEventEntity {
   @Column()
   eventIndex: number;
 
+  @Column({ nullable: true })
+  auditHash?: string;
+
   @Column({ type: 'jsonb' })
   payload: Record<string, unknown>;
 

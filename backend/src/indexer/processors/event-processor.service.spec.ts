@@ -1,6 +1,7 @@
 import { EventProcessorService } from './event-processor.service';
 import { ProjectionService } from '../projections/projection.service';
 import { IngestedEventDto } from '../dto/ingested-event.dto';
+import { computeAuditEventHash } from '../audit/event-hash';
 
 const makeEvent = (overrides: Partial<IngestedEventDto> = {}): IngestedEventDto => ({
   network: 'testnet',
@@ -31,6 +32,18 @@ describe('EventProcessorService', () => {
     const result = await svc.process(makeEvent());
     expect(result).toBe(true);
     expect(eventsRepo.save).toHaveBeenCalled();
+    const savedArg = eventsRepo.save.mock.calls[0][0];
+    expect(savedArg.auditHash).toEqual(
+      computeAuditEventHash({
+        network: savedArg.network,
+        contractId: savedArg.contractId,
+        topic: savedArg.topic,
+        txHash: savedArg.txHash,
+        ledger: savedArg.ledger,
+        eventIndex: savedArg.eventIndex,
+        payload: savedArg.payload,
+      }),
+    );
     expect(projectionService.apply).toHaveBeenCalled();
   });
 

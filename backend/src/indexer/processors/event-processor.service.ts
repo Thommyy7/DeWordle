@@ -5,6 +5,7 @@ import { IngestedEventDto } from '../dto/ingested-event.dto';
 import { IngestedEventEntity } from '../entities/ingested-event.entity';
 import { ProjectionService } from '../projections/projection.service';
 import { IndexerLogContext } from '../indexer.service';
+import { computeAuditEventHash } from '../audit/event-hash';
 
 @Injectable()
 export class EventProcessorService {
@@ -38,7 +39,17 @@ export class EventProcessorService {
       return false;
     }
 
-    await this.eventsRepo.save(this.eventsRepo.create(event));
+    const auditHash = computeAuditEventHash({
+      network: event.network,
+      contractId: event.contractId,
+      topic: event.topic,
+      txHash: event.txHash,
+      ledger: event.ledger,
+      eventIndex: event.eventIndex,
+      payload: event.payload,
+    });
+
+    await this.eventsRepo.save(this.eventsRepo.create({ ...event, auditHash }));
     await this.projectionService.apply(event, context);
     return true;
   }
