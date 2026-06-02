@@ -6,6 +6,7 @@ export interface ReplayAlertSnapshot {
   threshold: number;
   isAlerting: boolean;
   lastRejectedAt?: Date;
+  alertTag: string;
 }
 
 @Injectable()
@@ -31,18 +32,22 @@ export class ReplayAlertService {
       eventIndex,
       windowSkips: snapshot.windowSkips,
       threshold: snapshot.threshold,
-      alert: snapshot.isAlerting ? 'replay_rejection_threshold_exceeded' : 'replay_rejection_observed',
+      alert: snapshot.alertTag,
     });
 
     return snapshot;
   }
 
   snapshot(): ReplayAlertSnapshot {
+    const isAlerting = this.windowSkips >= this.threshold;
     return {
       windowSkips: this.windowSkips,
       threshold: this.threshold,
-      isAlerting: this.windowSkips >= this.threshold,
+      isAlerting,
       lastRejectedAt: this.lastRejectedAt,
+      alertTag: isAlerting
+        ? 'replay_rejection_threshold_exceeded'
+        : 'replay_rejection_observed',
     };
   }
 

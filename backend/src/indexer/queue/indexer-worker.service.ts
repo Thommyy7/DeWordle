@@ -23,6 +23,7 @@ export class IndexerWorkerService {
     const correlationId = randomUUID();
     const network = this.configService.get<string>('SOROBAN_NETWORK') || INDEXER_NETWORK_TESTNET;
     const cursor = await this.cursorService.getOrCreate(network, INDEXER_STREAM_CORE_GAME);
+    const replayAlert = this.replayAlertService.snapshot();
 
     this.logger.log({
       msg: 'indexer.worker.tick',
@@ -32,7 +33,8 @@ export class IndexerWorkerService {
       cursorTxHash: cursor.lastTxHash,
       cursorEventIndex: cursor.lastEventIndex,
       metrics: { ...this.indexerService.metrics },
-      replayAlert: this.replayAlertService.snapshot(),
+      replayAlert,
+      replayAlertTag: replayAlert.alertTag,
     });
 
     await this.indexerService.poll({ correlationId });
