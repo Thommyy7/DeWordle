@@ -8,6 +8,7 @@ import { CursorService } from './projections/cursor.service';
 import { compareEventsByCursor } from './processors/event-ordering.util';
 import { randomUUID } from 'crypto';
 import { INDEXER_STREAM_CORE_GAME } from './indexer.constants';
+import { ReplayAlertService } from './queue/replay-alert.service';
 
 export interface IndexerLogContext {
   correlationId: string;
@@ -57,6 +58,7 @@ export class IndexerService {
     private readonly eventNormalizer: EventNormalizerService,
     private readonly cursorService: CursorService,
     private readonly configService: ConfigService,
+    private readonly replayAlertService: ReplayAlertService,
   ) {}
 
   async ingest(event: IngestedEventDto, context?: IndexerLogContext) {
@@ -126,7 +128,6 @@ export class IndexerService {
     };
   }
 
-  async poll(): Promise<number> {
   async poll(context?: IndexerLogContext): Promise<number> {
     const network =
       (this.configService.get<string>('SOROBAN_NETWORK') as 'testnet' | 'mainnet') ||
@@ -228,9 +229,9 @@ export class IndexerService {
     return response.data?.result?.latestLedger ?? 0;
   }
 
-  recordReplaySkip(ledger: number, txHash: string, eventIndex: number) {
   recordReplaySkip(ledger: number, txHash: string, eventIndex: number, context?: IndexerLogContext) {
     this.metrics.replaySkips++;
+    const alert = this.replayAlertService.recordReplayRejection(ledger, txHash, eventIndex);
     this.logger.warn({
       msg: 'indexer.replay.skip',
       correlationId: context?.correlationId,
@@ -238,6 +239,7 @@ export class IndexerService {
       txHash,
       eventIndex,
       totalSkips: this.metrics.replaySkips,
+      replayAlert: alert.isAlerting ? 'threshold_exceeded' : 'below_threshold',
     });
   }
 }

@@ -2,6 +2,7 @@ import { IndexerService } from './indexer.service';
 import { EventNormalizerService } from './processors/event-normalizer.service';
 import { EventProcessorService } from './processors/event-processor.service';
 import { CursorService } from './projections/cursor.service';
+import { ReplayAlertService } from './queue/replay-alert.service';
 import { ConfigService } from '@nestjs/config';
 import { INDEXER_STREAM_CORE_GAME } from './indexer.constants';
 
@@ -39,6 +40,7 @@ const makeService = (overrides: {
     new EventNormalizerService(),
     cursorService,
     { get: configGet } as unknown as ConfigService,
+    new ReplayAlertService(),
   );
 
   return { svc, cursorService, eventProcessor };

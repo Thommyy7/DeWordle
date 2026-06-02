@@ -66,4 +66,21 @@ describe('IndexerQueueService', () => {
     await service.enqueue(makeEvent(2, 'tx-b', 0));
     expect(service.size()).toBe(2);
   });
+
+  it('rejects events once the bounded buffer is full', async () => {
+    const warnSpy = jest.spyOn((service as { logger: { warn: (...args: unknown[]) => void } }).logger, 'warn');
+
+    for (let i = 0; i < 500; i += 1) {
+      expect(await service.enqueue(makeEvent(i + 1, `tx-${i}`, 0))).toBe(true);
+    }
+
+    await expect(service.enqueue(makeEvent(999, 'tx-overflow', 0))).resolves.toBe(false);
+    expect(service.size()).toBe(500);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        msg: 'indexer.queue.rejected',
+        reason: 'buffer_limit_reached',
+      }),
+    );
+  });
 });

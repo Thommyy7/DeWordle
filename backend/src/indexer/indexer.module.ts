@@ -8,6 +8,7 @@ import { ProjectionService } from './projections/projection.service';
 import { CursorService } from './projections/cursor.service';
 import { IndexerQueueService } from './queue/indexer-queue.service';
 import { IndexerWorkerService } from './queue/indexer-worker.service';
+import { ReplayAlertService } from './queue/replay-alert.service';
 import { IngestedEventEntity } from './entities/ingested-event.entity';
 import { SessionProjectionEntity } from './entities/session-projection.entity';
 import { IndexerCursorEntity } from './entities/indexer-cursor.entity';
@@ -28,6 +29,7 @@ import { IndexerCursorEntity } from './entities/indexer-cursor.entity';
     ProjectionService,
     CursorService,
     IndexerQueueService,
+    ReplayAlertService,
     IndexerWorkerService,
   ],
   exports: [IndexerService, ProjectionService, CursorService, EventNormalizerService],
