@@ -2,6 +2,7 @@
  * Tests for stale network/session pre-submit guards in useGameplayTx.
  * These tests exercise the guard logic directly without React rendering.
  */
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { StaleContextError } from "./useGameplayTx";
 
 // Minimal wallet stub
@@ -15,12 +16,12 @@ function makeWallet(overrides: Partial<{
     address: "GABC123",
     network: "testnet",
     status: { id: "", state: "idle" as const },
-    setTxStatus: jest.fn(),
-    signTransaction: jest.fn().mockResolvedValue("signed_xdr"),
-    submitTransaction: jest.fn().mockResolvedValue({ hash: "txhash1" }),
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    switchNetwork: jest.fn(),
+    setTxStatus: vi.fn(),
+    signTransaction: vi.fn().mockResolvedValue("signed_xdr"),
+    submitTransaction: vi.fn().mockResolvedValue({ hash: "txhash1" }),
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    switchNetwork: vi.fn(),
     ...overrides,
   };
 }

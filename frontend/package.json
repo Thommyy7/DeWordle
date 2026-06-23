@@ -7,32 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "test": "jest --no-coverage"
-  },
-  "jest": {
-    "preset": "ts-jest",
-    "testEnvironment": "node",
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
-    },
-    "transform": {
-      "^.+\\.tsx?$": ["ts-jest", {
-        "tsconfig": {
-          "module": "commonjs",
-          "moduleResolution": "node",
-          "jsx": "react"
-        }
-      }]
-    },
-    "testMatch": ["**/*.spec.ts", "**/*.spec.tsx"]
+    "typecheck": "tsc --noEmit --project tsconfig.typecheck.json",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@dewordle/soroban-sdk": "file:../soroban/sdk/ts",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
+    "@stellar/stellar-sdk": "^13.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dicebear": "^9.2.4",
@@ -47,6 +31,7 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^5.1.0",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",

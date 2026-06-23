@@ -88,12 +88,6 @@ export function useGameplayTx() {
     wallet.setTxStatus({ id: "", state: "idle" });
   }, [wallet]);
 
-  const networkMismatch = useMemo(() => {
-    const configured = process.env.NEXT_PUBLIC_STELLAR_NETWORK;
-    if (!configured) return false;
-    return configured !== wallet.network;
-  }, [wallet.network]);
-
   return {
     execute,
     reset,

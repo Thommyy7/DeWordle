@@ -88,15 +88,15 @@ describe('reconcileGameplayState: snapshot projection', () => {
 
 describe('network mismatch detection', () => {
   it('detects mismatch when configured network differs from wallet network', () => {
-    const configured = 'mainnet';
-    const walletNetwork = 'testnet';
+    const configured: string = 'mainnet';
+    const walletNetwork: string = 'testnet';
     const mismatch = configured !== walletNetwork;
     expect(mismatch).toBe(true);
   });
 
   it('no mismatch when networks match', () => {
-    const configured = 'testnet';
-    const walletNetwork = 'testnet';
+    const configured: string = 'testnet';
+    const walletNetwork: string = 'testnet';
     const mismatch = configured !== walletNetwork;
     expect(mismatch).toBe(false);
   });
