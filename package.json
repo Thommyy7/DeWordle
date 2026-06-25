@@ -22,6 +22,10 @@
     "bootstrap": "node scripts/contributor-bootstrap.js",
     "bootstrap:json": "node scripts/contributor-bootstrap.js --json",
     "fixture:sandbox": "node scripts/fixture-sandbox.js",
-    "pr:checklist": "node scripts/pr-checklist-commenter.js"
+    "pr:checklist": "node scripts/pr-checklist-commenter.js",
+    "backup:projection": "./scripts/backup-projection-data.sh",
+    "restore:projection": "./scripts/restore-projection-data.sh",
+    "registry:validate": "node scripts/validate-registry-bundle.js",
+    "rpc:proxy": "node scripts/rpc-proxy.js"
   }
 }
