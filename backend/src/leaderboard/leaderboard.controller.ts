@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { LeaderboardService } from './leaderboard.service';
-import { Game } from '../games/entities/game.entity';
+import { type Game } from '../games/entities/game.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { type Repository } from 'typeorm';
 
 @Controller('leaderboard')
 export class LeaderboardController {

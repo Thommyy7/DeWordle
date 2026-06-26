@@ -1,9 +1,9 @@
-import { Injectable, Logger, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { LeaderboardEntry } from './leaderboard-entry.entity';
-import { User } from '../auth/entities/user.entity';
-import { Game } from '../games/entities/game.entity';
+import { type Repository } from 'typeorm';
+import { type LeaderboardEntry } from './leaderboard-entry.entity';
+import { type User } from '../auth/entities/user.entity';
+import { type Game } from '../games/entities/game.entity';
 
 @Injectable()
 export class LeaderboardService {
@@ -27,7 +27,7 @@ export class LeaderboardService {
         entry.totalSessions += 1;
       }
       return await this.leaderboardRepository.save(entry);
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Could not update leaderboard');
     }
   }
@@ -42,7 +42,7 @@ export class LeaderboardService {
         take: Math.max(1, Math.min(Number(take), 100)), // limit page size
         relations: ['user'],
       });
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Could not fetch game leaderboard');
     }
   }
@@ -62,7 +62,7 @@ export class LeaderboardService {
         .offset(Math.max(0, Number(skip)))
         .limit(Math.max(1, Math.min(Number(take), 100)));
       return await qb.getRawMany();
-    } catch (error) {
+    } catch {
       throw new InternalServerErrorException('Could not fetch global leaderboard');
     }
   }
