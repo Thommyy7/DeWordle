@@ -33,6 +33,14 @@ export class SessionProjectionEntity {
   @Column({ default: false })
   finalized: boolean;
 
+  /**
+   * Schema version of this projection row. Compared against
+   * CURRENT_PROJECTION_VERSION at read time to detect stale rows that need
+   * a migration pass before being served to consumers.
+   */
+  @Column({ default: 1 })
+  schemaVersion: number;
+
   @UpdateDateColumn()
   updatedAt: Date;
 }
