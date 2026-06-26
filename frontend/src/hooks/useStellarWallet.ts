@@ -14,6 +14,7 @@ export function useStellarWallet() {
     setTxStatus,
     signTransaction,
     submitTransaction,
+    onAccountSwitch,
   } = useWalletContext();
 
   return {
@@ -27,5 +28,6 @@ export function useStellarWallet() {
     setTxStatus,
     signTransaction,
     submitTransaction,
+    onAccountSwitch,
   };
 }
